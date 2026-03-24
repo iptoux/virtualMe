@@ -2,6 +2,8 @@
 
 An autonomous X (Twitter) bot with a native desktop dashboard. The bot generates opinionated posts and replies based on RSS/web news feeds and your home timeline, powered by any OpenAI-compatible AI provider — local or cloud.
 
+![virtualMe Dashboard Overview](docs/assets/Screenshot%202026-03-24%20171658.png)
+
 ```
 virtualMe/
 ├── service/     # Headless Bun process — runs 24/7, exposes REST + WebSocket
@@ -148,6 +150,8 @@ All values below are startup defaults set via `service/.env`. Every setting is a
 
 The bot ships with an opinionated tech persona: blunt, direct, critical of PR nonsense and hype. Posts in the **same language as the source article** (German or English). Criticises ideas and decisions — never insults people personally. The full prompt is in `service/src/config.ts` and editable at runtime via the dashboard.
 
+![Config tab — AI provider and persona prompt](docs/assets/Screenshot%202026-03-24%20171840.png)
+
 ---
 
 ## Dashboard Overview
@@ -159,6 +163,24 @@ The bot ships with an opinionated tech persona: blunt, direct, critical of PR no
 | **Posts** | Full post history with status badges; click `▶` to expand the AI prompt used to generate each post |
 | **News Sources** | Add/remove/toggle RSS feeds and web URLs |
 | **Config** | Edit all runtime settings including the persona prompt |
+
+### Live Logs
+
+Real-time log stream from the service. Click the chevron on any entry to expand metadata.
+
+![Live Logs tab](docs/assets/Screenshot%202026-03-24%20171723.png)
+
+### Posts
+
+Full post history. Click `▶` on any entry to reveal the exact system + user prompt the AI received when generating it.
+
+![Posts tab](docs/assets/Screenshot%202026-03-24%20171824.png)
+
+### News Sources
+
+Add and manage RSS feeds and web URLs. Toggle individual sources on/off without deleting them.
+
+![News Sources tab](docs/assets/Screenshot%202026-03-24%20171835.png)
 
 ---
 
