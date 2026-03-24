@@ -13,6 +13,7 @@ import {
 import { getHomeTimeline, createPost, createReply, createThread, splitIntoThread, canPost, canRead } from "./x-client";
 import { generatePost, generateReply } from "./ai-client";
 import { getNewsContext } from "./news";
+import { searchDuckDuckGo } from "./search";
 import { logger } from "./logger";
 import type { Post } from "../../shared/types";
 
@@ -77,11 +78,19 @@ export async function runPostCycle(db: Database): Promise<boolean> {
 
   const sourceUrl = newsContextItems[0]?.url ?? undefined;
 
+  // Fetch background context from DuckDuckGo using the primary news item as query.
+  // Single attempt — silently skipped if DDG is unavailable or returns nothing.
+  const primaryNews = newsContextItems[0];
+  const searchResults = primaryNews
+    ? await searchDuckDuckGo(primaryNews.text.slice(0, 120))
+    : [];
+
   const text = await generatePost({
     newsItems: newsContextItems.map((n) => n.text),
     recentTimeline,
     recentPosts,
     sourceUrl,
+    searchResults,
   });
 
   try {
@@ -91,18 +100,22 @@ export async function runPostCycle(db: Database): Promise<boolean> {
       return false;
     }
 
-    db.run("UPDATE posts SET content = ? WHERE id = ?", [text, postId]);
+    db.run("UPDATE posts SET content = ?, ai_prompt = ? WHERE id = ?", [text.text, text.prompt, postId]);
+    const postText = text.text;
 
     const { getConfig } = await import("./config");
     const cfg = getConfig();
-    const chunks = cfg.enable_threads ? splitIntoThread(text, cfg.max_tweet_length) : [text.slice(0, 260)];
+    const chunks = cfg.enable_threads ? splitIntoThread(postText, cfg.max_tweet_length) : [postText.slice(0, 260)];
 
-    // Append source URL to last chunk after slicing, so it's never cut off
+    // Append source URL to last chunk after slicing, so it's never cut off.
+    // X shortens all URLs to ~23 chars via t.co — only reserve that much space,
+    // not the full URL length.
     if (sourceUrl) {
       const urlSuffix = " " + sourceUrl;
       const maxLen = cfg.enable_threads ? cfg.max_tweet_length : 260;
+      const tcoReserve = 24; // 1 space + 23 chars (t.co shortened URL)
       const last = chunks.length - 1;
-      chunks[last] = chunks[last].slice(0, maxLen - urlSuffix.length) + urlSuffix;
+      chunks[last] = chunks[last].slice(0, maxLen - tcoReserve) + urlSuffix;
     }
 
     if (chunks.length === 1) {
@@ -164,9 +177,9 @@ export async function runReplyCycle(db: Database): Promise<boolean> {
     return false;
   }
 
-  db.run("UPDATE posts SET content = ? WHERE id = ?", [text, postId]);
+  db.run("UPDATE posts SET content = ?, ai_prompt = ? WHERE id = ?", [text.text, text.prompt, postId]);
 
-  const result = await createReply(db, text, targetTweet.x_tweet_id);
+  const result = await createReply(db, text.text, targetTweet.x_tweet_id);
   if (!result) {
     updatePostStatus(db, postId, "failed", undefined, "X API reply failed");
     logger.warn("scheduler", "Reply cycle: X API call failed");

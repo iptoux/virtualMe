@@ -7,7 +7,15 @@ import type {
   WsServerEvent,
 } from "../../../shared/types";
 
-const BASE = "http://localhost:3000";
+const DEFAULT_SERVICE_URL = "http://localhost:3000";
+
+export function getServiceUrl(): string {
+  return (localStorage.getItem("service_url") ?? DEFAULT_SERVICE_URL).replace(/\/$/, "");
+}
+
+export function setServiceUrl(url: string): void {
+  localStorage.setItem("service_url", url.replace(/\/$/, ""));
+}
 
 function buildQuery(params?: Record<string, string | number | undefined | null>): string {
   if (!params) return "";
@@ -17,7 +25,7 @@ function buildQuery(params?: Record<string, string | number | undefined | null>)
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${getServiceUrl()}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
@@ -64,10 +72,22 @@ class WsClient {
   private retryDelay = 2000;
   connected = false;
 
+  private buildWsUrl(): string {
+    const base = getServiceUrl();
+    return base.replace(/^http/, "ws") + "/ws";
+  }
+
+  reconnect() {
+    this.disconnect();
+    this.retryDelay = 2000;
+    // small delay so disconnect cleans up before reconnect
+    setTimeout(() => this.connect(), 100);
+  }
+
   connect() {
     if (this.ws) return;
     try {
-      this.ws = new WebSocket("ws://localhost:3000/ws");
+      this.ws = new WebSocket(this.buildWsUrl());
       this.ws.onopen = () => {
         this.connected = true;
         this.retryDelay = 2000;

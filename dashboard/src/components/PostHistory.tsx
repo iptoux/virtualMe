@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -15,6 +15,9 @@ const statusVariant: Record<string, "success" | "warning" | "destructive" | "sec
 };
 
 function PostRow({ post }: { post: Post }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasPrompt = !!post.ai_prompt;
+
   return (
     <div className="rounded px-2 py-2 hover:bg-[var(--muted)]/40 text-sm border-b border-[var(--border)]/40 last:border-0">
       <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -27,6 +30,15 @@ function PostRow({ post }: { post: Post }) {
         <span className="text-xs text-[var(--muted-foreground)] ml-auto shrink-0">
           {formatDate(post.created_at)}
         </span>
+        {hasPrompt && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] ml-1"
+            title="Show prompt"
+          >
+            {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
+        )}
       </div>
       <p className="text-[var(--foreground)] break-words leading-snug">{post.content}</p>
       {post.error && (
@@ -34,6 +46,11 @@ function PostRow({ post }: { post: Post }) {
       )}
       {post.x_tweet_id && (
         <p className="text-xs text-[var(--muted-foreground)] mt-0.5 font-mono">ID: {post.x_tweet_id}</p>
+      )}
+      {expanded && hasPrompt && (
+        <div className="mt-2 text-xs text-[var(--muted-foreground)] bg-[var(--muted)]/60 rounded p-2 whitespace-pre-wrap break-words font-mono leading-relaxed">
+          {post.ai_prompt}
+        </div>
       )}
     </div>
   );

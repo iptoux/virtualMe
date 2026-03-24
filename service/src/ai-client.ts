@@ -25,6 +25,7 @@ export interface PostContext {
   recentTimeline: string[];
   recentPosts: string[];
   sourceUrl?: string; // URL of the news item being referenced
+  searchResults?: Array<{ text: string; url: string }>; // DuckDuckGo background context
 }
 
 export interface ReplyContext {
@@ -55,7 +56,12 @@ function isTooSimilar(text: string, recentPosts: string[]): boolean {
   });
 }
 
-export async function generatePost(context: PostContext): Promise<string | null> {
+export interface GenerateResult {
+  text: string;
+  prompt: string; // full system + user messages, stored in DB for inspection
+}
+
+export async function generatePost(context: PostContext): Promise<GenerateResult | null> {
   const cfg = getConfig();
   const client = getClient();
 
@@ -78,20 +84,17 @@ export async function generatePost(context: PostContext): Promise<string | null>
     ? `\n\nA source link will be appended automatically at the end. Do NOT include any URL yourself. Write only the commentary text (max ${maxContentLength} chars).`
     : "";
 
+  const searchContext = context.searchResults?.length
+    ? `\n\nAdditional background (use only if it directly relates to the chosen news item — ignore otherwise):\n${context.searchResults.map((r) => `- ${r.text}`).join("\n")}`
+    : "";
+
   const userPrompt = newsContext
-    ? `Use ONE of these news items as inspiration (pick the most interesting angle, do NOT summarize it directly):\n${newsContext}${urlNote}`
+    ? `Use ONE of these news items as inspiration (pick the most interesting angle, do NOT summarize it directly):\n${newsContext}${searchContext}${urlNote}`
     : timelineContext
     ? `Inspired by this timeline activity, write an original take:\n${timelineContext}`
     : "Write an interesting original thought about technology, software, or AI.";
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const response = await client.chat.completions.create({
-        model: cfg.ai_model,
-        messages: [
-          {
-            role: "system",
-            content: `${cfg.persona_prompt}
+  const systemPrompt = `${cfg.persona_prompt}
 
 Output rules (follow strictly):
 - Output ONLY the post text. No labels, no preamble, no "Here's a tweet:", no explanations.
@@ -101,8 +104,16 @@ Output rules (follow strictly):
 - Hashtags: 0 to 2, only if they fit naturally. Never force them.
 ${lengthRule}
 - Must NOT cover the same topic as any of these recent posts:
-${recentTopics || "  (no recent posts yet)"}`,
-          },
+${recentTopics || "  (no recent posts yet)"}`;
+
+  const storedPrompt = `[SYSTEM]\n${systemPrompt}\n\n[USER]\n${userPrompt}`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: cfg.ai_model,
+        messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         // Reasoning models (e.g. DeepSeek-R1, nemotron) need extra tokens to finish
@@ -142,7 +153,7 @@ ${recentTopics || "  (no recent posts yet)"}`,
         continue;
       }
 
-      return text;
+      return { text, prompt: storedPrompt };
     } catch (err) {
       logger.error("ai", `Failed to generate post (attempt ${attempt + 1}): ${err instanceof Error ? err.message : String(err)}`);
       if (attempt === 2) return null;
@@ -152,18 +163,11 @@ ${recentTopics || "  (no recent posts yet)"}`,
   return null;
 }
 
-export async function generateReply(context: ReplyContext): Promise<string | null> {
+export async function generateReply(context: ReplyContext): Promise<GenerateResult | null> {
   const cfg = getConfig();
   const client = getClient();
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const response = await client.chat.completions.create({
-        model: cfg.ai_model,
-        messages: [
-          {
-            role: "system",
-            content: `${cfg.persona_prompt}
+  const systemPrompt = `${cfg.persona_prompt}
 
 Output rules (follow strictly):
 - Output ONLY the reply text. No labels, no preamble, no intro phrases.
@@ -172,12 +176,18 @@ Output rules (follow strictly):
 - NO emojis
 - Hashtags: 0 to 1, only if genuinely fitting. Never force them.
 - Must be under ${cfg.max_tweet_length} characters. Replies are always a single tweet, never a thread.
-- Be direct and add value. Not sycophantic, not diplomatic.`,
-          },
-          {
-            role: "user",
-            content: `Reply to this tweet${context.authorUsername ? ` by @${context.authorUsername}` : ""}:\n"${context.tweetText}"`,
-          },
+- Be direct and add value. Not sycophantic, not diplomatic.`;
+
+  const userPrompt = `Reply to this tweet${context.authorUsername ? ` by @${context.authorUsername}` : ""}:\n"${context.tweetText}"`;
+  const storedPrompt = `[SYSTEM]\n${systemPrompt}\n\n[USER]\n${userPrompt}`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: cfg.ai_model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
         max_tokens: Math.max(1024, cfg.max_tweet_length * 4),
         temperature: 0.8,
@@ -211,7 +221,7 @@ Output rules (follow strictly):
         continue;
       }
 
-      return text;
+      return { text, prompt: storedPrompt };
     } catch (err) {
       logger.error("ai", `Failed to generate reply (attempt ${attempt + 1}): ${err instanceof Error ? err.message : String(err)}`);
       if (attempt === 2) return null;
