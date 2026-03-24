@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { BarChart2, ScrollText, Settings, Rss, FileText, Bot } from "lucide-react";
 import { ConnectionSettingsDialog } from "./components/ConnectionSettingsDialog";
-import { isConnectionConfigured, setConnectionSettings } from "./lib/connection-settings";
+import { isConnectionConfigured, setConnectionSettings, getServiceUrl, getServiceSecret } from "./lib/connection-settings";
 import { wsClient } from "./lib/api-client";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { ConnectionStatus } from "./components/ConnectionStatus";
@@ -30,15 +30,10 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "config", label: "Config", icon: Settings },
 ];
 
-export default function App() {
+// Isolated shell — remounted via `key` whenever connection settings change,
+// which forces all store hooks to re-run with the updated credentials.
+function AppShell({ onReconnect }: { onReconnect: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>("stats");
-  const [setupOpen, setSetupOpen] = useState(!isConnectionConfigured());
-
-  const handleSetupSave = (url: string, secret: string) => {
-    setConnectionSettings(url, secret);
-    setSetupOpen(false);
-    wsClient.reconnect();
-  };
   const connected = useServiceConnection();
   const stats = useStats();
   const { logs, clear: clearLogs } = useLogs(200);
@@ -47,15 +42,7 @@ export default function App() {
   const { sources, refresh: refreshSources } = useNewsSources();
 
   return (
-    <div className="dark flex h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <ConnectionSettingsDialog
-        open={setupOpen}
-        onOpenChange={setSetupOpen}
-        initialUrl="http://localhost:3000"
-        initialSecret=""
-        onSave={handleSetupSave}
-        required
-      />
+    <>
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r border-[var(--border)] bg-[var(--card)]">
         <div className="flex items-center gap-2 px-4 py-5 border-b border-[var(--border)]">
@@ -80,7 +67,7 @@ export default function App() {
           ))}
         </nav>
         <div className="p-4 border-t border-[var(--border)]">
-          <ConnectionStatus connected={connected} />
+          <ConnectionStatus connected={connected} onReconnect={onReconnect} />
         </div>
       </aside>
 
@@ -103,6 +90,36 @@ export default function App() {
           </main>
         </ScrollArea>
       )}
+    </>
+  );
+}
+
+export default function App() {
+  const [connectionKey, setConnectionKey] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(!isConnectionConfigured());
+
+  const handleReconnect = () => {
+    wsClient.reconnect();
+    setConnectionKey((k) => k + 1);
+  };
+
+  const handleSetupSave = (url: string, secret: string) => {
+    setConnectionSettings(url, secret);
+    setSetupOpen(false);
+    handleReconnect();
+  };
+
+  return (
+    <div className="dark flex h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <ConnectionSettingsDialog
+        open={setupOpen}
+        onOpenChange={setSetupOpen}
+        initialUrl={getServiceUrl()}
+        initialSecret={getServiceSecret()}
+        onSave={handleSetupSave}
+        required
+      />
+      <AppShell key={connectionKey} onReconnect={handleReconnect} />
     </div>
   );
 }
