@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "start": "bun run src/index.ts"
+    "start": "bun run src/index.ts",
+    "generate-secret": "bun ./scripts/generate-secret.ts"
   },
   "dependencies": {
     "openai": "^4.77.0",
