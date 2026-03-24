@@ -23,7 +23,30 @@ cd ../dashboard && bun install
 
 ---
 
-## 2 — Configure the service
+## 2 — Generate a service secret
+
+The service requires a shared secret to authenticate the dashboard. Generate one now:
+
+```bash
+cd service
+bun scripts/generate-secret.ts
+```
+
+Output:
+
+```
+  Generated SERVICE_SECRET:
+
+  SERVICE_SECRET=4b9a1f3e8c2d7a6b0e5f1c3d9b2a4e7f...
+
+  Add this line to your service/.env file.
+```
+
+Copy the printed line — you will need it in the next step and again when setting up the dashboard.
+
+---
+
+## 3 — Configure the service
 
 ```bash
 cp service/.env.example service/.env
@@ -45,8 +68,9 @@ AI_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
 AI_API_KEY=lm-studio                  # arbitrary for local models
 
 # ── Service ──────────────────────────────────────────────
-PORT=3000
-HOST=0.0.0.0            # 127.0.0.1 to restrict to localhost only
+SERVICE_PORT=3000
+SERVICE_HOST=0.0.0.0     # 127.0.0.1 to restrict to localhost only
+SERVICE_SECRET=4b9a1f3e8c2d7a...    # paste your generated secret here
 
 # ── Bot defaults (can be changed at runtime in the dashboard) ──
 POLL_INTERVAL_MINUTES=480   # 8 h — safe for X free tier (~100 reads/month)
@@ -78,7 +102,7 @@ For local models, any model that follows instruction format works. 7B–14B mode
 
 ---
 
-## 3 — Run the service
+## 4 — Run the service
 
 ```bash
 cd service
@@ -114,23 +138,28 @@ rm service/bot.lock
 
 ---
 
-## 4 — Open the dashboard
+## 5 — Open the dashboard
 
 ```bash
 cd dashboard
 bun tauri dev
 ```
 
-The Tauri window opens and connects to `http://localhost:3000` automatically.
+On first launch a **Connection Settings** dialog appears — the dashboard cannot be used until it is filled in:
 
-If the service is running on a different machine or port:
-1. Click the **pencil icon** next to the connection status in the sidebar
-2. Enter the new base URL (e.g. `http://192.168.1.10:3000`)
-3. Press Enter — the dashboard reconnects immediately
+| Field | Value |
+|---|---|
+| **Service URL** | `http://localhost:3000` (or wherever the service is running) |
+| **Service Secret** | The value of `SERVICE_SECRET` from your `.env` |
+
+Click **Connect**. The dashboard stores both values in `localStorage` and will use them for every subsequent launch.
+
+**Changing connection settings later:**
+Click the **pencil icon** next to the connection status badge in the sidebar to reopen the dialog.
 
 ---
 
-## 5 — Add your first news source
+## 6 — Add your first news source
 
 1. Open the **News Sources** tab
 2. Select type: **RSS** or **URL**
@@ -143,7 +172,7 @@ The service fetches all enabled sources every hour and stores new items in the d
 
 ---
 
-## 6 — Trigger your first post
+## 7 — Trigger your first post
 
 Go to the **Overview** tab and click **Post Now**. This bypasses the schedule timer (but still respects the monthly/daily budget). Watch the **Live Logs** tab to see what happens in real time.
 

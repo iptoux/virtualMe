@@ -75,7 +75,27 @@ cd service && bun install
 cd ../dashboard && bun install
 ```
 
-### 2. Configure the service
+### 2. Generate a service secret
+
+Every dashboard connection requires a shared secret. Generate one before editing `.env`:
+
+```bash
+cd service
+bun scripts/generate-secret.ts
+```
+
+Output:
+```
+  Generated SERVICE_SECRET:
+
+  SERVICE_SECRET=4b9a1f3e8c2d7a6b...
+
+  Add this line to your service/.env file.
+```
+
+Keep this value — you will enter it in the dashboard on first launch.
+
+### 3. Configure the service
 
 ```bash
 cp service/.env.example service/.env
@@ -99,9 +119,22 @@ AI_API_KEY=not-needed
 # Service
 SERVICE_PORT=3000
 SERVICE_HOST=0.0.0.0
+SERVICE_SECRET=     # Required — generate with: openssl rand -hex 32
 ```
 
 All other settings (post frequency, active hours, persona, etc.) can be configured at runtime via the dashboard.
+
+### 4. Run the service & open the dashboard
+
+```bash
+# Terminal 1 — service
+cd service && bun run src/index.ts
+
+# Terminal 2 — dashboard
+cd dashboard && bun tauri dev
+```
+
+On **first dashboard launch**, a Connection Settings dialog appears. Enter the service URL (`http://localhost:3000`) and the `SERVICE_SECRET` you generated. The dashboard stores both in `localStorage` — subsequent launches connect automatically.
 
 ---
 
@@ -125,7 +158,7 @@ bun tauri dev         # development (hot reload)
 bun tauri build       # production build
 ```
 
-The dashboard connects to `http://localhost:3000` by default. The backend URL is configurable from the sidebar (pencil icon next to the connection status) and persists across restarts.
+On first launch, a setup dialog asks for the service URL and secret — both are stored in `localStorage` and never transmitted anywhere else. The pencil icon in the sidebar lets you update these settings at any time.
 
 ---
 
@@ -145,6 +178,7 @@ All values below are startup defaults set via `service/.env`. Every setting is a
 | `MAX_TWEET_LENGTH` | `280` | 280 standard · 4000 X Premium · 25000 X Premium+ |
 | `ENABLE_THREADS` | `true` | Split posts longer than `MAX_TWEET_LENGTH` into reply chains |
 | `PERSONA_PROMPT` | *(see below)* | The bot's voice and persona, sent as system prompt to the AI |
+| `SERVICE_SECRET` | — | **Required.** Shared secret — the dashboard must provide this to connect. Generate with `openssl rand -hex 32` |
 
 ### Default persona
 

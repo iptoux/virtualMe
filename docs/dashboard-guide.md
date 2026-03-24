@@ -12,7 +12,7 @@ bun tauri dev      # development mode (hot reload)
 bun tauri build    # build a release binary
 ```
 
-The dashboard opens a window and immediately tries to connect to the service at `http://localhost:3000`.
+On **first launch**, a Connection Settings dialog appears before anything else. Enter the service URL and your `SERVICE_SECRET` to proceed. These values are stored in `localStorage` and used for all future launches.
 
 ---
 
@@ -23,7 +23,7 @@ The sidebar is always visible. It contains:
 - **Navigation tabs** — click to switch views
 - **Connection status** — shows whether the dashboard has an active WebSocket connection to the service
 
-### Connection Status & URL
+### Connection Status & Settings
 
 ```
 ● Connected          ✏
@@ -31,15 +31,19 @@ http://localhost:3000
 ```
 
 - The **coloured badge** (green = connected, red = disconnected) reflects the WebSocket state.
-- The **pencil icon** opens an inline URL editor.
+- The **pencil icon** opens the Connection Settings dialog.
 - The **URL shown below** is the current service URL stored in `localStorage`.
 
-**Changing the service URL:**
-1. Click the pencil icon (or click the URL itself)
-2. Type the new address — e.g. `http://192.168.1.10:3000`
-3. Press **Enter** or click the checkmark to save
+**Connection Settings dialog** (pencil icon or click the URL):
 
-The WebSocket reconnects immediately. All subsequent REST calls go to the new URL. The value persists across dashboard restarts (stored in `localStorage`).
+| Field | Description |
+|---|---|
+| **Service URL** | HTTP base URL of the service, e.g. `http://localhost:3000` |
+| **Service Secret** | Must match `SERVICE_SECRET` in the service `.env`. Use the show/hide toggle to verify. |
+
+Click **Save & Reconnect** to apply. The WebSocket reconnects immediately and all subsequent REST calls include the updated credentials. Both values persist in `localStorage` across restarts.
+
+> **First launch:** the dialog is mandatory and cannot be dismissed until both fields are filled. This ensures the dashboard is always authenticated before making any requests.
 
 ---
 

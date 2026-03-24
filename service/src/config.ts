@@ -98,6 +98,7 @@ export function onConfigChange(listener: (config: BotConfig) => void): () => voi
 
 export const SERVICE_PORT = Number(process.env.SERVICE_PORT ?? 3000);
 export const SERVICE_HOST = process.env.SERVICE_HOST ?? "0.0.0.0";
+export const SERVICE_SECRET = process.env.SERVICE_SECRET ?? "";
 
 export const X_CONFIG = {
   apiKey: process.env.X_API_KEY ?? "",

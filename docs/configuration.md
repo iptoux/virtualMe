@@ -139,8 +139,20 @@ These are `.env`-only settings (not runtime-changeable):
 
 | Key | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | TCP port the service listens on |
-| `HOST` | `0.0.0.0` | Bind address. Use `127.0.0.1` to restrict to localhost only. |
+| `SERVICE_PORT` | `3000` | TCP port the service listens on |
+| `SERVICE_HOST` | `0.0.0.0` | Bind address. Use `127.0.0.1` to restrict to localhost only. |
+| `SERVICE_SECRET` | — | **Required.** Shared secret used to authenticate the dashboard. All REST requests must carry `Authorization: Bearer <secret>`. The WebSocket upgrade requires `?secret=<secret>` as a query parameter. If left empty, auth is disabled (not recommended for networked setups). |
+
+### Generating a secret
+
+```bash
+cd service
+bun scripts/generate-secret.ts
+```
+
+This prints a ready-to-paste `SERVICE_SECRET=...` line. The output is a cryptographically random 32-byte hex string (64 characters). Copy it into `service/.env` and enter the same value in the dashboard's Connection Settings dialog on first launch.
+
+> **Keep this value private.** Anyone with the secret can fully control the bot — trigger posts, read logs, change config, and delete data.
 
 ---
 
@@ -162,8 +174,9 @@ AI_MODEL=lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF
 AI_API_KEY=lm-studio
 
 # Service network
-PORT=3000
-HOST=0.0.0.0
+SERVICE_PORT=3000
+SERVICE_HOST=0.0.0.0
+SERVICE_SECRET=          # Required — generate with: bun scripts/generate-secret.ts
 
 # Bot defaults (overridable at runtime via dashboard)
 POLL_INTERVAL_MINUTES=480
@@ -191,3 +204,4 @@ READS_LIMIT=90
 | Post content settings | Yes | No |
 | X API credentials | No | Yes (in `.env`) |
 | Service port / host | No | Yes (in `.env`) |
+| `SERVICE_SECRET` | No | Yes (in `.env`) |
