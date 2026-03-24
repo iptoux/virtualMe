@@ -1,7 +1,7 @@
 import { initDb, getDb } from "./db";
 import { initConfig } from "./config";
 import { initLogger, onLog, logger } from "./logger";
-import { SERVICE_PORT, SERVICE_HOST } from "./config";
+import { SERVICE_PORT, SERVICE_HOST, SERVICE_SECRET } from "./config";
 import { startScheduler } from "./scheduler";
 import { onPostCreated } from "./bot-engine";
 import { handleRequest } from "./api/routes";
@@ -60,6 +60,9 @@ Bun.serve({
 
     // WebSocket upgrade
     if (url.pathname === "/ws") {
+      if (SERVICE_SECRET && url.searchParams.get("secret") !== SERVICE_SECRET) {
+        return new Response("Unauthorized", { status: 401 });
+      }
       const upgraded = server.upgrade(req, { data: { channels: new Set() } });
       if (!upgraded) return new Response("WebSocket upgrade failed", { status: 400 });
       return undefined;

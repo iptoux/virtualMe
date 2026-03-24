@@ -10,7 +10,7 @@ import {
   getCurrentBudget,
   countPostsToday,
 } from "../db";
-import { getConfig, setConfig } from "../config";
+import { getConfig, setConfig, SERVICE_SECRET } from "../config";
 import {
   startScheduler,
   stopScheduler,
@@ -57,7 +57,7 @@ export function handleRequest(req: Request, db: Database): Response {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 
   if (method === "OPTIONS") {
@@ -65,6 +65,16 @@ export function handleRequest(req: Request, db: Database): Response {
   }
 
   async function handle(): Promise<Response> {
+    // === Auth guard ===
+    if (SERVICE_SECRET) {
+      const auth = req.headers.get("Authorization") ?? "";
+      if (auth !== `Bearer ${SERVICE_SECRET}`) {
+        return Response.json(
+          { error: { code: "UNAUTHORIZED", message: "Invalid or missing secret" } },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+    }
     // === Stats ===
     if (path === "/api/stats" && method === "GET") {
       return ok(getStats(db));

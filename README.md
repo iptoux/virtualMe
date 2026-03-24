@@ -99,6 +99,7 @@ AI_API_KEY=not-needed
 # Service
 SERVICE_PORT=3000
 SERVICE_HOST=0.0.0.0
+SERVICE_SECRET=     # Required — generate with: openssl rand -hex 32
 ```
 
 All other settings (post frequency, active hours, persona, etc.) can be configured at runtime via the dashboard.
@@ -125,7 +126,7 @@ bun tauri dev         # development (hot reload)
 bun tauri build       # production build
 ```
 
-The dashboard connects to `http://localhost:3000` by default. The backend URL is configurable from the sidebar (pencil icon next to the connection status) and persists across restarts.
+On first launch, a setup dialog asks for the service URL and secret — both are stored in `localStorage` and never transmitted anywhere else. The pencil icon in the sidebar lets you update these settings at any time.
 
 ---
 
@@ -145,6 +146,7 @@ All values below are startup defaults set via `service/.env`. Every setting is a
 | `MAX_TWEET_LENGTH` | `280` | 280 standard · 4000 X Premium · 25000 X Premium+ |
 | `ENABLE_THREADS` | `true` | Split posts longer than `MAX_TWEET_LENGTH` into reply chains |
 | `PERSONA_PROMPT` | *(see below)* | The bot's voice and persona, sent as system prompt to the AI |
+| `SERVICE_SECRET` | — | **Required.** Shared secret — the dashboard must provide this to connect. Generate with `openssl rand -hex 32` |
 
 ### Default persona
 

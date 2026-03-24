@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { BarChart2, ScrollText, Settings, Rss, FileText, Bot } from "lucide-react";
+import { ConnectionSettingsDialog } from "./components/ConnectionSettingsDialog";
+import { isConnectionConfigured, setConnectionSettings } from "./lib/connection-settings";
+import { wsClient } from "./lib/api-client";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { StatsOverview } from "./components/StatsOverview";
@@ -29,6 +32,13 @@ const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("stats");
+  const [setupOpen, setSetupOpen] = useState(!isConnectionConfigured());
+
+  const handleSetupSave = (url: string, secret: string) => {
+    setConnectionSettings(url, secret);
+    setSetupOpen(false);
+    wsClient.reconnect();
+  };
   const connected = useServiceConnection();
   const stats = useStats();
   const { logs, clear: clearLogs } = useLogs(200);
@@ -38,6 +48,14 @@ export default function App() {
 
   return (
     <div className="dark flex h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <ConnectionSettingsDialog
+        open={setupOpen}
+        onOpenChange={setSetupOpen}
+        initialUrl="http://localhost:3000"
+        initialSecret=""
+        onSave={handleSetupSave}
+        required
+      />
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r border-[var(--border)] bg-[var(--card)]">
         <div className="flex items-center gap-2 px-4 py-5 border-b border-[var(--border)]">

@@ -7,15 +7,8 @@ import type {
   WsServerEvent,
 } from "../../../shared/types";
 
-const DEFAULT_SERVICE_URL = "http://localhost:3000";
-
-export function getServiceUrl(): string {
-  return (localStorage.getItem("service_url") ?? DEFAULT_SERVICE_URL).replace(/\/$/, "");
-}
-
-export function setServiceUrl(url: string): void {
-  localStorage.setItem("service_url", url.replace(/\/$/, ""));
-}
+export { getServiceUrl, setServiceUrl, getServiceSecret, setServiceSecret, setConnectionSettings, isConnectionConfigured } from "./connection-settings";
+import { getServiceUrl, getServiceSecret } from "./connection-settings";
 
 function buildQuery(params?: Record<string, string | number | undefined | null>): string {
   if (!params) return "";
@@ -27,7 +20,11 @@ function buildQuery(params?: Record<string, string | number | undefined | null>)
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${getServiceUrl()}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getServiceSecret()}`,
+      ...init?.headers,
+    },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = await res.json();
@@ -74,7 +71,9 @@ class WsClient {
 
   private buildWsUrl(): string {
     const base = getServiceUrl();
-    return base.replace(/^http/, "ws") + "/ws";
+    const secret = getServiceSecret();
+    const qs = secret ? `?secret=${encodeURIComponent(secret)}` : "";
+    return base.replace(/^http/, "ws") + "/ws" + qs;
   }
 
   reconnect() {
