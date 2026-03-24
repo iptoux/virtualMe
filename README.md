@@ -75,7 +75,27 @@ cd service && bun install
 cd ../dashboard && bun install
 ```
 
-### 2. Configure the service
+### 2. Generate a service secret
+
+Every dashboard connection requires a shared secret. Generate one before editing `.env`:
+
+```bash
+cd service
+bun scripts/generate-secret.ts
+```
+
+Output:
+```
+  Generated SERVICE_SECRET:
+
+  SERVICE_SECRET=4b9a1f3e8c2d7a6b...
+
+  Add this line to your service/.env file.
+```
+
+Keep this value — you will enter it in the dashboard on first launch.
+
+### 3. Configure the service
 
 ```bash
 cp service/.env.example service/.env
@@ -103,6 +123,18 @@ SERVICE_SECRET=     # Required — generate with: openssl rand -hex 32
 ```
 
 All other settings (post frequency, active hours, persona, etc.) can be configured at runtime via the dashboard.
+
+### 4. Run the service & open the dashboard
+
+```bash
+# Terminal 1 — service
+cd service && bun run src/index.ts
+
+# Terminal 2 — dashboard
+cd dashboard && bun tauri dev
+```
+
+On **first dashboard launch**, a Connection Settings dialog appears. Enter the service URL (`http://localhost:3000`) and the `SERVICE_SECRET` you generated. The dashboard stores both in `localStorage` — subsequent launches connect automatically.
 
 ---
 
