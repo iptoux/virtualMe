@@ -1,0 +1,14 @@
+{
+  "name": "virtualme-root",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["service", "shared"],
+  "scripts": {
+    "service": "cd service && bun run src/index.ts",
+    "service:dev": "cd service && bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "electrobun": "^1.16.0"
+  }
+}

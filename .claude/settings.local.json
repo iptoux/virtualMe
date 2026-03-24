@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Bash(bun tauri:*)",
+      "Bash(node_modules/.bin/vite.exe --version)",
+      "WebFetch(domain:docs.x.com)",
+      "WebFetch(domain:developer.x.com)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}
